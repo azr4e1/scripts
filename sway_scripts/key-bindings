@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+path="$HOME/.config/sway/config"
+grep -P "^\s*# KEY|^\s*bindsym|^\s*mode" $path | sed 's/KEY //' | sed 's/{//' | sed -E 's/(^\s*)# /\n\1/' | sed 's/bindsym //' | sed 's/--locked //' > /tmp/key_bindings
+
+dialog --clear --backtitle "Key Bindings" --title "Key Bindings" --no-lines --scrollbar --erase-on-exit --textbox /tmp/key_bindings 50 60

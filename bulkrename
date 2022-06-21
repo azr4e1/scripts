@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+# bulk rename the files in the specified directory
+
+dir=$1
+# if no args, default to current
+[ -z "$dir" ] && dir=$( pwd )
+cd "$dir"
+
+# create a tmp file containing the current
+# filenames
+[ -d "/tmp/to_rename" ] || mkdir -p /tmp/to_rename/renamed
+nr=$( ls /tmp/to_rename | wc -l )
+tmp_file_old=/tmp/to_rename/rename_$nr
+tmp_file_new=/tmp/to_rename/renamed/renamed_$nr
+ls > $tmp_file_old
+
+# now initialize and edit the same file
+# in the 'renamed' directory with the new
+# names using your current editor
+cp $tmp_file_old $tmp_file_new
+$EDITOR $tmp_file_new
+
+# if some lines were deleted, exit
+length1=$( cat $tmp_file_old | wc -l )
+length2=$( cat $tmp_file_new | wc -l )
+if [ "$length1" -ne "$length2" ]; then
+    echo "Some file names are missing! Exiting"
+    exit 1
+fi
+
+# do the renaming
+for i in $( seq $length1 ); do
+    file1=$( sed -n ${i}p "$tmp_file_old" )
+    file2=$( sed -n ${i}p "$tmp_file_new" )
+    [ "$file1" = "$file2" ] && continue
+    mv -iv "$file1" "$file2"
+done

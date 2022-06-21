@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+social_media=(
+    www.youtube.com
+    www.youtube.it
+    www.youtube.co.uk
+    youtube.com
+    youtube.it
+    youtube.co.uk
+    www.reddit.com
+    reddit.com
+    www.facebook.com
+    facebook.com
+    www.twitter.com
+    twitter.com
+    www.kickassanime.rs
+    www.netflix.com
+    www.netflix.co.uk
+    www.primevideo.com
+    www.primevideo.co.uk
+    www.lichess.org
+    www.chess.com
+    piped.kavin.rocks
+    odysee.com
+    reedditapp.com
+)
+
+if [[ $1 == "block" ]]; then
+    for i in "${social_media[@]}"; do
+        sed -i "/^127.0.0.1 $i/d" /etc/hosts
+        echo "127.0.0.1 $i" >> /etc/hosts
+    done
+fi
+
+if [[ $1 == "unblock" ]]; then
+    for i in "${social_media[@]}"; do
+        sed -i "/^127.0.0.1 $i/d" /etc/hosts
+    done
+fi
+# vim: ft=bash

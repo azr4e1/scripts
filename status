@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+# print cpu usage
+echo "CPU used: $( mpstat | awk 'NR == 4 { printf ("%.2f", 100 - $12)}' )%  "
+# print memory usage
+echo "Memory used: $( free | awk 'NR == 2 {printf ("%.2f", $3/$2*100)}' )%  "
+# print free disk space
+echo "Free disk space:  $( df -h 2> /dev/null | awk '/dm-0/ {print $4}' )  "
+echo
+# print programs that use most CPU and memory. paste
+# is necessary to put one alongside the other. Since
+# paste accepts only files, we use process substitution
+paste <(ps -e -o comm,%cpu --sort=-%cpu | head -n10) <(ps -e -o comm,%mem --sort=-%mem | head -n10)
+

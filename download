@@ -1,0 +1,275 @@
+#!/usr/bin/env bash
+
+#set -e
+
+# Ansi color code variables
+export black="\e[0;90m"
+export cyan="\e[0;96m"
+export purple="\e[0;95m"
+export yellow="\e[0;93m"
+export red="\e[0;91m"
+export blue="\e[0;94m"
+export expand_bg="\e[K"
+export blue_bg="\e[0;104m${expand_bg}"
+export red_bg="\e[0;101m${expand_bg}"
+export green_bg="\e[0;102m${expand_bg}"
+export green="\e[0;92m"
+export white="\e[0;97m"
+export bold="\e[1m"
+export uline="\e[4m"
+export reset="\e[0m"
+
+function music {
+    # download music from youtube
+    url=$1
+    path="$(xdg-user-dir MUSIC)"
+    clear
+    printf "${cyan}${uline}Fetching title...${reset}\n"
+    title=$( yt-dlp --get-title $url | tr " " "_" | tr '|/' "-" | tr -d '()[]{}.+*?' )
+    printf "\n${green}Title${reset}: \"${blue}${bold}$title${reset}\"\n"
+
+    # if something went wrong (eg no connection, youtube blocked request)
+    # title will likely be empty. If that is the case, manage the error
+    #[ ! -n "$title" ] && { notify-send --expire-time=5000 --icon=$HOME/Pictures/Logos/sad.png "Something went wrong..."; exit 1; }
+
+    # check that the song wasn't already downloaded
+    check=$( ls "$path" | grep -P "$title" )
+
+    if [ -z "$check" ]; then
+        notify-send --expire-time=3000 --icon=$HOME/Pictures/Logos/disc.png "Download Started"
+        yt-dlp --add-metadata -x -i --audio-quality 0 --audio-format mp3 "$url" -o "$path/$title.%(ext)s"
+        notify-send --expire-time=5000 --icon=$HOME/Pictures/Logos/disc.png "Music downloaded"
+    else
+        printf "${green}${bold}Music was already downloaded!${reset}\n"
+    fi
+}
+
+function video {
+    # download videos from youtube
+    url=$1
+    dir=$2
+    path="$(xdg-user-dir VIDEOS)"
+    clear
+    printf "${cyan}${uline}Fetching title...${reset}\n"
+    title=$( yt-dlp --get-title $url | tr " " "_" | tr '|/' "-" | tr -d '()[]{}.+*?' )
+    printf "\n${green}Title${reset}: \"${blue}${bold}$title${reset}\"\n"
+
+    # if something went wrong (eg no connection, youtube blocked request)
+    # title will likely be empty. If that is the case, manage the error
+    #[ ! -n "$title" ] && { notify-send --expire-time=5000 --icon=$HOME/Pictures/Logos/sad.png "Something went wrong..."; exit 1; }
+
+    # if already downloaded, show in which directory
+    already_downl=$(find $path -iregex .*${title}.*)
+    if [ -n "$already_downl" ]; then
+        container=$( dirname "$already_downl" )
+        container=$( basename "$container" )
+        warning=" (Already in \"${container}\")"
+    fi
+
+    # use fzf to select subfolder of ~/Videos
+    [ -z "$dir" ] && subfolder=$(printf "$( ls $path )\nNew\n" | fzf --prompt="Select a subfolder${warning}: ")
+
+    # if video was already downloaded in that dir,
+    # don't do anything
+    if [ -n "$dir" -a -n "$already_downl" ]; then
+        printf "${green}Video was already downloaded in \"${container}\"${reset}\n\n"
+        exit 1
+    fi
+
+    [ -n "$dir" -a ! -d "$path/$dir" ] && mkdir -p "$path/$dir"
+    [ -n "$dir" ] && subfolder="$dir"
+
+    # keep asking until entry is a valid subfolder
+    until [ -d "$path/$subfolder" ]; do
+
+        # check if what submitted is actually a file
+        if [ -f "$subfolder" ]; then
+            subfolder=$(ls $path | fzf --prompt="That is a file! ")
+        elif [ "$subfolder" == "New" ]; then
+            printf "${green}New directory:${reset} ${red}" 
+            read subfolder
+            printf "${reset}"
+            if [ -z "$subfolder" ]; then
+                exit
+            fi
+            # check that it is different from the existing dirs
+            match=$( ls "$path" | grep -P "^$subfolder$" )
+            if [ -z "$match" ]; then
+                mkdir -p "$path/$subfolder"
+            fi
+        fi
+    done
+
+    # if you pressed ESC, then do nothing
+    if [ ! -n "$subfolder" ]; then
+        exit
+    fi
+
+    match=$( ls "$path/$subfolder" | grep -P "$title")
+    if [ -z "$match" ]; then
+        # download the video
+        notify-send --expire-time=3000 --icon=$HOME/Pictures/Logos/video.png "Download Started"
+        yt-dlp --add-metadata $url -o "${path}/${subfolder}/${title}.%(ext)s"
+        notify-send --expire-time=5000 --icon="$HOME/Pictures/Logos/video.png" "Video downloaded in \"${subfolder}\""
+    else
+        printf "${green}${bold}Video is already present in \"$subfolder\"${reset}\n"
+    fi
+}
+
+function podcast {
+    # download podcasts
+    url=$1
+    dir=$2
+    path="$(xdg-user-dir MUSIC)/Podcasts"
+    clear
+    printf "${cyan}${uline}Fetching title...${reset}\n"
+    title=$( yt-dlp --get-title $url | tr " " "_" | tr '|/' "-" | tr -d '()[]{}.+*?' )
+    printf "\n${green}Title${reset}: \"${blue}${bold}$title${reset}\"\n"
+
+    # if something went wrong (eg no connection, youtube blocked request)
+    # title will likely be empty. If that is the case, manage the error
+    #[ ! -n "$title" ] && { notify-send --expire-time=5000 --icon=$HOME/Pictures/Logos/sad.png "Something went wrong..."; exit 1; }
+
+    # if already downloaded, show in which directory
+    already_downl=$(find $path -iregex .*${title}.*)
+    if [ -n "$already_downl" ]; then
+        container=$( dirname "$already_downl" )
+        container=$( basename "$container" )
+        warning=" (Already in \"${container}\")"
+    fi
+
+    # use fzf to select subfolder of ~/Videos
+    [ -z "$dir" ] && subfolder=$(printf "$( ls $path )\nNew\n" | fzf --prompt="Select a subfolder${warning}: ")
+
+    # if Podcast was already downloaded in that dir,
+    # don't do anything
+    if [ -n "$dir" -a -n "$already_downl" ]; then
+        printf "${green}Podcast was already downloaded in \"${container}\"${reset}\n\n"
+        exit 1
+    fi
+
+    [ -n "$dir" -a ! -d "$path/$dir" ] && mkdir -p "$path/$dir"
+    [ -n "$dir" ] && subfolder="$dir"
+
+    # keep asking until entry is a valid subfolder
+    until [ -d "$path/$subfolder" ]; do
+
+        # check if what submitted is actually a file
+        if [ -f "$subfolder" ]; then
+            subfolder=$(ls $path | fzf --prompt="That is a file! ")
+        elif [ "$subfolder" == "New" ]; then
+            read -p "${green}New Podcast:${reset} ${red}" subfolder
+            echo "${reset}"
+            if [ -z "$subfolder" ]; then
+                exit
+            fi
+            # check that it is different from the existing dirs
+            match=$( ls "$path" | grep -P "^$subfolder$" )
+            if [ -z "$match" ]; then
+                mkdir -p "$path/$subfolder"
+            fi
+        fi
+    done
+
+    # if you pressed ESC, then do nothing
+    if [ ! -n "$subfolder" ]; then
+        exit
+    fi
+
+    match=$( ls "$path/$subfolder" | grep -P "$title" )
+    if [ -z "$match" ]; then
+        # download the video
+        notify-send --expire-time=3000 --icon=$HOME/Pictures/Logos/podcast.png "Download Started"
+        yt-dlp --add-metadata $1 -o "${path}/$subfolder/${title}.%(ext)s"
+        notify-send --expire-time=5000 --icon=$HOME/Pictures/Logos/podcast.png "Podcast downloaded in \"${subfolder}\""
+    else
+        printf "${green}${bold}Podcast is already present in \"$subfolder\"${reset}\n"
+    fi
+}
+
+#url="${@: -1}"
+## if no url
+#[ -z "$url" ] && exit 1
+#
+## if not valid url
+#if ! [[ "$url" =~ "http" ]]; then
+#    printf "${red}${bold}Not a valid url${reset}\n"
+#    exit 1
+#fi
+#
+## if just one argument, default to video
+#if [ "${#@}" -eq 1 ]; then
+#    clear
+#    video "$url"
+#    exit 0
+#fi
+
+# else
+optstring=":vmp-:"
+while getopts "$optstring" option; do
+    case "$option" in
+        -)
+            case "$OPTARG" in
+                music)
+                    clear
+                    music "$url"
+                    ;;
+                video)
+                    shift 1
+                    if [[ "$1" =~ "http" ]]; then
+                        url="$1"
+                        dir="$2"
+                    else
+                        url="$2"
+                        dir="$1"
+                    fi
+                    video "$url" "$dir"
+                    ;;
+                podcast)
+                    shift 2
+                    if [[ "$1" =~ "http" ]]; then
+                        url="$1"
+                        dir="$2"
+                    else
+                        url="$2"
+                        dir="$1"
+                    fi
+                    podcast "$url" "$dir"
+                    ;;
+                *)
+                    printf "${red}${bold}Unknown option${reset}\n"
+                    ;;
+            esac;;
+        m)
+            shift
+            url="$1"
+            music "$url"
+            ;;
+        v)
+            shift
+            if [[ "$1" =~ "http" ]]; then
+                url="$1"
+                dir="$2"
+            else
+                url="$2"
+                dir="$1"
+            fi
+            video "$url" "$dir"
+            ;;
+        p)
+            shift
+            if [[ "$1" =~ "http" ]]; then
+                url="$1"
+                dir="$2"
+            else
+                url="$2"
+                dir="$1"
+            fi
+            podcast "$url" "$dir"
+            ;;
+        *)
+            printf "${red}${bold}Unknown option${reset}\n"
+            ;;
+    esac
+done
+# vim: ft=bash

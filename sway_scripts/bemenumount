@@ -1,0 +1,89 @@
+#!/bin/sh
+
+# this scripts uses wofi to fire up
+# a menu to easily mount a drive
+
+
+# use lsblk to detect drives not mounted, except for main drive
+# then use wofi to select the drive you want to mount
+drives=$( lsblk -pl | grep "part $" | awk '!/nvme0n1.*/ {print $1 " (" $4 ")"}' )
+
+# if there are no drives to mount, exit
+[ ! -n "$drives" ] && exit 1
+
+# else choose drive to mount
+drive=$( echo "$drives" | wofi -d -i -p 'Select drive to mount:' | awk '{print $1}' )
+
+# if they chose an invalid device, let 'em know
+until [ -b "$drive" ] || [ ! -n "$drive" ]; do
+    drive=$( echo "$drives" | wofi -d -i -p 'That is not a drive! Select a valid device:' | awk '{print $1}')
+done
+
+# if esc is pressed, exit
+[ ! -n "$drive" ] && exit 1
+
+# if drive is in fstab, mount it
+sudo mount "$drive" 2> /dev/null && { notify-send --expire-time=3000 --urgency=low --icon=$HOME/Pictures/Logos/usb.png "$drive mounted automatically"; exit 0; }
+
+# determine mount points used already
+mounted=$( lsblk -pl | awk 'NR != 1 {if ($7 != "") print $7 }' )
+
+# once selected the drive, ask where to mount it.
+mount_points=$( find /mnt /media /mount /home -maxdepth 2 2> /dev/null )
+mount_point=$( echo "$mount_points" | wofi -d -i -p "Mount point?")
+
+# if esc is pressed, exit
+[ ! -n "$mount_point" ] && exit 1
+
+
+options="No\nYes"
+while ((1)); do
+
+    # if mountpoint does not exist, ask whether to create it
+    until [ -d "$mount_point" ] || [ ! -n "$mount_point" ]; do
+
+        create=$( echo -e "$options" | wofi -d -p "$mount_point does not exist. Create it?" )
+        # if yes, create it and mount
+        if [ "$create" = "Yes" ]; then
+            sudo mkdir "$mount_point"
+        # exit if esc is pressed
+        elif [ ! -n "$create" ]; then
+            exit 1
+        # else ask again
+        else
+            mount_point=$( echo -e "$mount_points" | wofi -d -i -p "Mount point?")
+            # if esc is pressed, exit
+            [ ! -n "$mount_point" ] && exit 1
+        fi
+    done
+
+
+    # check if you are using mount point already in use
+    in_use=$( tr " " "\n" <<< $mounted | grep "$mount_point$" )
+    # if so, ask whether they want to proceed regardless
+    if [ -n "$in_use" ]; then
+        answer=$( echo -e "$options" | wofi -d -i -p "$mount_point is already in use. Proceed?" )
+        # if yes, mount
+        if [ "$answer" = "Yes" ]; then
+            sudo mount "$drive" "$mount_point"
+            # this is to send notification
+            notify-send --expire-time=3000 --urgency=low --icon=$HOME/Pictures/Logos/usb.png "$drive mounted on $mount_point"
+            exit 0
+        # if esc pressed, exit
+        elif [ ! -n "$answer" ]; then
+            exit 1
+        # else, ask again for mount point
+        else
+            mount_point=$( echo -e "$mount_points" | wofi -d -i -p "Mount point?")
+            # if esc is pressed, exit
+            [ ! -n "$mount_point" ] && exit 1
+        fi
+    # if not, mount and exit
+    else
+        sudo mount "$drive" "$mount_point"
+        # this is to send notification
+        notify-send --expire-time=3000 --urgency=low --icon=$HOME/Pictures/Logos/usb.png "$drive mounted on $mount_point"
+        exit 0
+    fi
+done
+# vim: ft=bash

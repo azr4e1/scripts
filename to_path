@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+[ -z "$1" ] && exit 1
+
+path="$( pwd )"
+name=$( basename "$1" )
+
+ln -s "$path/$name" "$HOME/.local/bin/$name"

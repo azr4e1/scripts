@@ -1,0 +1,31 @@
+#!/bin/sh
+
+
+# alternative to passmenu that uses wofi instead of dmenu
+
+# strips the trailing .gpg
+function password_names {
+
+    for path in $@
+    do
+        local base=$( basename -s .gpg $path )
+        local dir=$( dirname $path )
+        local pass=$dir/$base
+
+        echo $pass
+    done
+
+}
+
+
+password_store=/home/$(whoami)/.password-store
+
+cd $password_store
+paths=$( find . -type f '!' -name ".gpg-id" -printf "%P \n")
+
+login=$( password_names $paths | wofi -d -p "Select password:" )
+
+[ ! -n "$login" ] && exit 1
+
+pass show "$login" | wl-copy
+# vim: ft=bash

@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+
+# This script creates the xml files necessary to
+# create a dynamic wallpaper with the content of
+# the directory provided
+import argparse, os, sys
+from getpass import getuser
+
+
+def static(time, pic):
+    '''
+    Build the xml string for static images
+    '''
+
+    static_string = f'''
+    <static>
+        <!-- Duration in seconds to display the background -->
+        <duration>{str(time)}</duration>
+        <file>{pic}</file>
+    </static>
+    '''
+
+    return static_string
+
+
+def transition(time, pic1, pic2):
+    '''
+    Build the xml portion for transition
+    '''
+
+    transition_string = f'''
+    <transition>
+        <!-- Duration of the transition in seconds, default is 2 seconds -->
+        <duration>{str(time)}</duration>
+        <from>{pic1}</from>
+        <to>{pic2}</to>
+    </transition>
+    '''
+
+    return transition_string
+
+
+def configuration(name):
+    '''
+    Create the config file in .local/share/gnome-background-properties
+    '''
+
+    config_string = f'''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">
+<wallpapers>
+    <wallpaper deleted="false">
+        <name>{name}</name>
+        <filename>/home/ld/Pictures/Dynamic_Wallpapers/{name}.xml</filename>
+       <options>zoom</options>
+     </wallpaper>
+</wallpapers>
+    '''
+
+    return config_string
+
+
+def split_extension(path):
+    '''
+    Split filename and extension
+    '''
+    extension = ""
+    for i in range(len(path)):
+        if path[-(i + 1)] == ".":
+            extension = path[-(i+1):]
+            path = path[:-(i+1)]
+            break
+
+    return path, extension
+
+
+def default_name(default):
+    '''
+    find a non used default name
+    by appending (before extension)
+    a number
+    '''
+
+    # find extension
+    default, extension = split_extension(default)
+    default_inc = default
+
+    i = 1
+    while os.path.exists(f"{default_inc}{extension}"):
+        default_inc = f"{default}{i}"
+        i += 1
+
+    return f"{default_inc}{extension}"
+
+
+# create sub dir to store dynamic wallpapers
+user = getuser()
+path_dyn_wall = f"/home/{user}/Pictures/Dynamic_Wallpapers"
+path_config = f"/home/{user}/.local/share/gnome-background-properties"
+
+if not os.path.exists(path_dyn_wall):
+    os.mkdir(path_dyn_wall)
+
+if not os.path.exists(path_config):
+    os.mkdir(path_config)
+
+# parse the arguments
+parser = argparse.ArgumentParser()
+parser.add_argument("wallpapers", help="Absolute path of the directory containing the wallpapers")
+parser.add_argument("-n", "--name", help="Name of the dynamic wallpaper", default="dynamic_wallpaper")
+parser.add_argument("-t", "--transition_time", type=int, default=2, help="Specify transition time between images")
+parser.add_argument("-s", "--static_time", type=int, default=3600, help="Specify time a single wallpaper is shown")
+
+args = parser.parse_args()
+
+# check that the directory exists
+if not os.path.exists(args.wallpapers):
+    sys.exit("Not a valid directory!")
+
+name = default_name(os.path.join(path_dyn_wall, f"{args.name}.xml"))
+basename = split_extension(os.path.basename(name))[0]
+
+# create a list with the names of the images
+wallpapers = os.listdir(path=args.wallpapers)
+
+with open(name, "a") as f:
+    f.write('''<?xml version="1.0" ?>
+<background>
+    ''')
+
+    for pos in range(len(wallpapers) - 1):
+        f.write(static(args.static_time,
+                os.path.join(args.wallpapers, f"{wallpapers[pos]}")))
+        f.write(transition(args.transition_time,
+                os.path.join(args.wallpapers, f"{wallpapers[pos]}"),
+                os.path.join(args.wallpapers, f"{wallpapers[pos+1]}")))
+
+    # close the circle
+    f.write(static(args.static_time,
+            os.path.join(args.wallpapers, f"{wallpapers[-1]}")))
+    f.write(transition(args.transition_time,
+            os.path.join(args.wallpapers, f"{wallpapers[-1]}"),
+            os.path.join(args.wallpapers, f"{wallpapers[0]}")))
+
+    # and finally
+    f.write('''
+</background>
+    ''')
+
+# and now create the configuration file
+with open(f"{path_config}/{basename}.xml", "w") as f:
+    f.write(configuration(basename))
+
+print("Operation Completed!")

@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# generates passwords and stores them in
+# pass using wofi
+
+function password_names {
+
+    for path in $@
+    do
+        local base=$( basename -s .gpg $path )
+        local dir=$( dirname $path )
+        local pass=$dir/$base
+
+        echo $pass
+    done
+
+}
+
+
+password_store=/home/$(whoami)/.password-store
+
+cd $password_store
+paths=$( find . -type f '!' -name ".gpg-id" -printf "%P \n")
+
+login=$( password_names $paths | wofi -d -p "New login:" )
+
+[ ! -n "$login" ] && exit 1
+
+pass generate --clip --force "$login"
+# vim: ft=bash

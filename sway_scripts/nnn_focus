@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+# check whether nautilus is already open
+APP_ID=$( pgrep -f "^nautilus$" )
+
+# if not launch it
+if [ -z "$APP_ID" ]; then
+    nautilus
+else
+    swaymsg '[app_id="org.gnome.Nautilus"] focus'
+fi

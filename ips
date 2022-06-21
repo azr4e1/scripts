@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+echo 'This is Interactive Perl Shell'
+rlwrap -A -pgreen -S"perl> " perl -wnE'say eval()//$@'

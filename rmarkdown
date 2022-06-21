@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+echo "rmarkdown::render(\"$1\")" | R --no-save > /dev/null

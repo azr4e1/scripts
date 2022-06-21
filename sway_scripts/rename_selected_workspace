@@ -1,0 +1,24 @@
+#!/bin/sh
+
+function rename {
+    # what workspace are active?
+    active_workspaces=$( swaymsg -t get_workspaces | jq '.[] | .name' | tr -d '"')
+    # put each workspace on a single line
+    for i in $active_workspaces; do workspaces+=$i"\n"; done
+    # possible names
+    names="work\nwww\ncoding\npdf\nwiki\ngames\nmusic\ninfo\nmovies"
+    # choose workspace to rename
+    workspace=$( echo -e ${workspaces:: -2} | wofi -d -p "Which workspace to rename?" )
+
+    [ -z "$workspace" ] && exit 1
+
+    # choose new name
+    name=$( echo -e $names | wofi -d -p "Rename with:" )
+
+    [ -z "$name" ] && exit 1
+
+    # rename
+    swaymsg "rename workspace $workspace to $name"
+}
+
+rename

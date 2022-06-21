@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+function usage {
+    echo "compile programs depending on their EXTENSIONS"
+    echo "Filetype recognised: C, C++, R, Python, Lua, LaTeX, Markdown, Bash, Rmarkdown"
+
+    echo "
+-o: option
+    Markdown
+        html -- html conversion
+        beamer -- presentation conversion (pdf)
+        pdf -- pdf conversion
+    LaTeX
+        cont -- enter in continuous compilation mode
+
+-h: print this help and exit"
+    echo
+}
+
+function comp_markdown {
+    file=$1
+    output=$2
+    [ -z "$output" ] && output=pdf
+    case $output in
+        pdf) pandoc -t pdf $file -o $( basename -s .md $file ).pdf;;
+        beamer) pandoc -t beamer $file -o $( basename -s .md $file ).pdf;;
+        html) markdown $file > $( basename -s .md $file).html;;
+    esac
+}
+
+function comp_latex {
+    file=$1
+    option=$2
+    [ -z "$option" ] && { latexmk -pdf $file; exit 0; }
+    case $option in
+        cont) latexmk -pdf -pvc -view=none $file;;
+    esac
+}
+
+optstring=":ho:"
+while getopts $optstring name; do
+    case $name in
+        o) option=$OPTARG;;
+        h) usage;;
+        :) echo "Invalid argument"; exit 1;;
+        *) echo "$OPTARG is not a valid option"; usage; exit 1;;
+    esac
+done
+
+
+# file to compile
+to_compile=${@: -1}
+
+case $to_compile in
+    *.py) python $to_compile;;
+    *.R) Rscript $to_compile;;
+    *.c) gcc $to_compile -o $( basename -s .c $to_compile ).out;;
+    *.cpp) g++ $to_compile -o $( basename -s .cpp $to_compile ).out;;
+    *.lua) lua $to_compile;;
+    *.tex) comp_latex $to_compile $option;;
+    *.md) comp_markdown $to_compile $option;;
+    *.sh) bash $to_compile;;
+    *.rmd) rmarkdown $to_compile;;
+    *.Rmd) rmarkdown $to_compile;;
+    *.pl) perl $to_compile;;
+    *) echo "Nothing to do";;
+esac

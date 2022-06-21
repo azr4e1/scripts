@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+function loading {
+
+    pid=$!
+    wiki=$@
+    frames="/ - \\ |"
+    
+    while kill -0 $pid > /dev/null 2>&1; do
+        for frame in $frames; do
+            printf "\r$frame Updating $wiki"
+            sleep 0.5
+        done
+    done
+    
+    printf "\n"
+}
+
+# update the website
+log_path=~/Desktop/Wikis/.log
+
+echo
+echo -e "\n\n===MACHINE LEARNING WIKI===\n" >> $log_path
+rsync -rqtzP --log-file=$log_path ~/Desktop/Wikis/Machine\ Learning/html ~/Desktop/Wikis/Machine\ Learning/images root@a0z1-wiki.xyz:/var/www/wiki/machine_learning &
+loading "Machine Learning wiki"
+echo -e "\n\n===MARKETING WIKI===\n" >> $log_path
+rsync -rqtzP --log-file=$log_path ~/Desktop/Wikis/Marketing/html ~/Desktop/Wikis/Marketing/images root@a0z1-wiki.xyz:/var/www/wiki/marketing &
+loading "Marketing wiki"
+echo -e "\n\n===PROGRAMMING WIKI===\n" >> $log_path
+rsync -rqtzP --log-file=$log_path ~/Desktop/Wikis/Coding/html ~/Desktop/Wikis/Coding/images root@a0z1-wiki.xyz:/var/www/wiki/coding &
+loading "Programming wiki"
+echo -e "\n\n===STATISTICS WIKI===\n" >> $log_path
+rsync -rqtzP --log-file=$log_path ~/Desktop/Wikis/Statistics/html ~/Desktop/Wikis/Statistics/images root@a0z1-wiki.xyz:/var/www/wiki/statistics &
+loading "Statistics wiki"
+
+echo
+echo "Finished updating"
+echo

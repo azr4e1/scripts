@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# play most recently downloaded video
+cd $HOME/Videos/Youtube-dl/
+
+# pick the most recently modified folder
+folder=$( ls --full-time | awk '{print $6,$7,$9}' | sort | awk '{print $3}' | tail -n1 )
+
+# pick most recently downloaded video
+video=$( ls "$folder" | sort | tail -n1 )
+
+# play it
+mpv $folder/$video

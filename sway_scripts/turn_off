@@ -1,0 +1,22 @@
+#!/bin/sh
+
+options="logout\nshutdown\nrestart\nsuspend"
+choice=$(echo -e "$options" | wofi -d -i -p "What would you like to do?")
+
+[ -z "$choice" ] && exit 1
+
+# check if protonvpn active
+vpn=$( pgrep -f protonvpn )
+[ -n "$vpn" ] && protonvpn-cli disconnect
+
+if [ "$choice" = "shutdown" ]; then
+    shutdown now
+elif [ "$choice" = "restart" ]; then
+    shutdown -r now
+elif [ "$choice" = "suspend" ]; then
+    systemctl suspend
+elif [ "$choice" = "logout" ]; then
+    swaymsg exit
+fi
+
+# vim: ft=bash

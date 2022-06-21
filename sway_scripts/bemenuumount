@@ -1,0 +1,33 @@
+#!/bin/sh
+
+# fire up a wofi instance to guide
+# you through unmounting a device
+
+# use lsblk to detect drives mounted, except for main drive
+# then use wofi to select the drive you want unmount
+drives=$( lsblk -pl | awk 'NR!=1 && !/sda.*/ {if ($7 != "") print $1 " (" $4 ") on " $7}' )
+
+# if nothing present, exit
+[ ! -n "$drives" ] && exit 1
+
+# else choose drive to unmount
+drive=$( echo "$drives" | wofi -d -i -p 'Select drive to unmount:' | awk '{print $1}' )
+
+# if they chose an invalid device, let 'em know
+until [ -b "${drive}" ] || [ ! -n "$drive" ]; do
+    drive=$( echo "$drives" | wofi -d -i -p 'That is not a drive! Select a valid device:' | awk '{print $1}')
+done
+
+# if esc is pressed, exit
+[ ! -n "$drive" ] && exit 1
+
+# unmount the drive
+sudo umount "$drive"
+# if successful
+if [ "$?" -eq 0 ]; then
+    notify-send --expire-time=3000 --urgency=low --icon=$HOME/Pictures/Logos/usb.png "$drive unmounted"
+    # else
+else
+    notify-send --expire-time=3000 --urgency=critical --icon=$HOME/Pictures/Logos/sad.png "Something is wrong"
+fi
+# vim: ft=bash
