@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# repeat a previous command
 if [ -z "$1" ]; then
     echo "No command number passed"
     exit 2
