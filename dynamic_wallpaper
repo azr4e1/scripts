@@ -2,7 +2,8 @@
 
 # This script creates the xml files necessary to
 # create a dynamic wallpaper with the content of
-# the directory provided
+# the directory provided, and installs them in
+# the appropriate directories
 import argparse, os, sys
 from getpass import getuser
 
